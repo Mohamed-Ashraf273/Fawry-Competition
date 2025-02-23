@@ -14,7 +14,7 @@ Before running the project, install:
 
 ## Installation steps
 ```bash
-git clone https://github.com/your-repo/surveillance-for-retail-stores.git
+git clone https://github.com/Mohamed-Ashraf273/Fawry-Competition.git
 cd surveillance-for-retail-stores
 pip install -r requirements.txt
 ```
