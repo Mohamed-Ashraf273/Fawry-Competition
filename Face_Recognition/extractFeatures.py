@@ -16,10 +16,11 @@ person_dirs = [
     if os.path.isdir(os.path.join(base_path, person))
 ]
 
+embeddings = []
+targets = []
+
 for person_dir in person_dirs:
     person_name = os.path.basename(person_dir)
-    embeddings = []
-
     image_paths = [
         os.path.join(person_dir, img)
         for img in os.listdir(person_dir)
@@ -37,11 +38,19 @@ for person_dir in person_dirs:
         if len(face) == 0:
             print(f"No face detected in: {img_path}")
             continue
-
+        person = person_name.split('_')[1]
+        print(person)
+        targets.append(person)
         embeddings.append(face[0].normed_embedding.tolist())
 
-    json_filename = os.path.join('Fawry-Competition/Face_Recognition/features', f"{person_name}.json")
-    with open(json_filename, "w") as f:
-        json.dump(embeddings, f, indent=4)
+json_filename = os.path.join('Fawry-Competition/Face_Recognition', "all_features.json")
+with open(json_filename, "w") as f:
+    json.dump(embeddings, f, indent=4)
 
     print(f"Saved embeddings for {person_name} in {json_filename}")
+
+json_filename = os.path.join('Fawry-Competition/Face_Recognition', "target.json")
+with open(json_filename, "w") as f:
+    json.dump(targets, f, indent=4)
+
+    print(f"Saved targets for in {json_filename}")
