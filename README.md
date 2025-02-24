@@ -15,6 +15,6 @@ Before running the project, install:
 ## Installation steps
 ```bash
 git clone https://github.com/Mohamed-Ashraf273/Fawry-Competition.git
-cd surveillance-for-retail-stores
+cd Fawry-Competition
 pip install -r requirements.txt
 ```
