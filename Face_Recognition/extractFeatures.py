@@ -2,55 +2,58 @@ import json
 import cv2
 import numpy as np
 import os
-from insightface.app import FaceAnalysis
+import torch
+from facenet_pytorch import MTCNN, InceptionResnetV1
 
 base_path = "/mnt/d/Fawry Comp/surveillance-for-retail-stores/face_identification/face_identification/train"
+save_dir = "./"
 
-w, h = 256, 256
-app = FaceAnalysis(name="buffalo_l")
-app.prepare(ctx_id=0, det_size=(w, h))
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-person_dirs = [
-    os.path.join(base_path, person)
-    for person in os.listdir(base_path)
-    if os.path.isdir(os.path.join(base_path, person))
-]
+mtcnn = MTCNN(image_size=224, margin=10, min_face_size=40, keep_all=False, device=device)
+facenet = InceptionResnetV1(pretrained='vggface2').eval().to(device)
 
 embeddings = []
 targets = []
 
+fail_count = 0
+
+person_dirs = [os.path.join(base_path, person) for person in os.listdir(base_path) if os.path.isdir(os.path.join(base_path, person))]
+
 for person_dir in person_dirs:
-    person_name = os.path.basename(person_dir)
-    image_paths = [
-        os.path.join(person_dir, img)
-        for img in os.listdir(person_dir)
-        if img.lower().endswith((".jpg", ".png", ".jpeg"))
-    ]
+    person_name = os.path.basename(person_dir)  
+    image_paths = [os.path.join(person_dir, img) for img in os.listdir(person_dir) if img.lower().endswith((".jpg", ".png", ".jpeg"))]
 
     for img_path in image_paths:
         img = cv2.imread(img_path)
         if img is None:
             print(f"Failed to load image: {img_path}")
             continue
-        img = cv2.resize(img, (w, h))
+        
         img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-        face = app.get(img)
-        if len(face) == 0:
+        face = mtcnn(img)
+        
+        if face is None:
+            fail_count += 1
             print(f"No face detected in: {img_path}")
             continue
-        person = person_name.split('_')[1]
-        print(person)
-        targets.append(person)
-        embeddings.append(face[0].normed_embedding.tolist())
+        
+        face = face.unsqueeze(0).to(device)
+        with torch.no_grad():
+            train_embeddings = facenet(face).cpu().numpy().flatten()
 
-json_filename = os.path.join('Fawry-Competition/Face_Recognition', "all_features.json")
-with open(json_filename, "w") as f:
+        train_embeddings = train_embeddings / np.linalg.norm(train_embeddings)  
+        #print(len(train_embeddings))
+        embeddings.append(train_embeddings.tolist())
+        print(person_name)
+        targets.append(person_name)
+
+print(f"fail count: {fail_count}")
+
+with open(os.path.join(save_dir, "all_features.json"), "w") as f:
     json.dump(embeddings, f, indent=4)
+print(f"Saved embeddings in all_features.json")
 
-    print(f"Saved embeddings for {person_name} in {json_filename}")
-
-json_filename = os.path.join('Fawry-Competition/Face_Recognition', "target.json")
-with open(json_filename, "w") as f:
+with open(os.path.join(save_dir, "target.json"), "w") as f:
     json.dump(targets, f, indent=4)
-
-    print(f"Saved targets for in {json_filename}")
+print(f"Saved targets in target.json")
